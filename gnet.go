@@ -253,7 +253,7 @@ func Serve(eventHandler EventHandler, protoAddr string, opts ...Option) (err err
 	if options.Logger != nil {
 		logging.DefaultLogger = options.Logger
 	}
-	defer logging.Cleanup()
+	defer logging.Cleanup() // 内部用了zap日志库
 
 	// The maximum number of operating system threads that the Go program can use is initially set to 10000,
 	// which should be the maximum amount of I/O event-loops locked to OS threads users can start up.
@@ -269,8 +269,14 @@ func Serve(eventHandler EventHandler, protoAddr string, opts ...Option) (err err
 		options.ReadBufferCap = internal.CeilToPowerOfTwo(rbc)
 	}
 
+	// 解析出来网络协议和地址
 	network, addr := parseProtoAddr(protoAddr)
 
+	// 在这里初始化一个 socket连接的对象，
+	// 后面会对这个socket对象进行监听，所有的socket请求都来自于这里。
+	//
+	// 这里参数稍微解释一下：
+	// SO_REUSEPORT - 端口复用。开启后，可以监听同一个端口。
 	var ln *listener
 	if ln, err = initListener(network, addr, options.ReusePort); err != nil {
 		return

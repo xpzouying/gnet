@@ -46,14 +46,22 @@ func (ln *listener) Dup() (int, string, error) {
 }
 
 func (ln *listener) normalize() (err error) {
+	// XXX(zy): 下面的package为什么是从 reuseport package中引出来。
+
+	// 在这里按照 tcp/uid/unix 进行区分socket类型
 	switch ln.network {
 	case "tcp", "tcp4", "tcp6":
+		// 在 reuseport.TCPSocket 中，创建了tcpaddr，socket fd，
+		// 然后做了bind、listen的操作。
+		//
+		// 监听在fd上，netaddr为lnaddr。
 		ln.fd, ln.lnaddr, err = reuseport.TCPSocket(ln.network, ln.addr, ln.reusePort)
 		ln.network = "tcp"
 	case "udp", "udp4", "udp6":
 		ln.fd, ln.lnaddr, err = reuseport.UDPSocket(ln.network, ln.addr, ln.reusePort)
 		ln.network = "udp"
 	case "unix":
+		// TODO(zy): 后面看看unixsocket是怎么处理的。
 		_ = os.RemoveAll(ln.addr)
 		ln.fd, ln.lnaddr, err = reuseport.UnixSocket(ln.network, ln.addr, ln.reusePort)
 	default:
@@ -75,7 +83,12 @@ func (ln *listener) close() {
 }
 
 func initListener(network, addr string, reusePort bool) (l *listener, err error) {
+	// listener初始化的时候，先保存必要的配置信息。
 	l = &listener{network: network, addr: addr, reusePort: reusePort}
+
+	// 在这里进行初始化“设置”。使用前面传入的参数进行初始化设置。
+	// 刚看完这个函数，发现这里面做了好多操作。。。
+	// 简单来说：建立了socket连接，并且进行了监听。
 	err = l.normalize()
 	return
 }

@@ -29,6 +29,7 @@ import (
 // Option is a function that will set up option.
 type Option func(opts *Options)
 
+// 这里使用的方式是把所有的配置都放到一个Options对象中，然后将所有传入的options赋值到该Options上。
 func loadOptions(options ...Option) *Options {
 	opts := new(Options)
 	for _, option := range options {
